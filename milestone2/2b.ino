@@ -37,7 +37,7 @@ int getValidAngle() {
 
 void setup() {
   Serial.begin(9600);
-
+  
   // Set up Timer1 for phase-correct PWM at 50Hz
   TCCR1A = 0;  // Reset Timer1 control register A
   TCCR1B = 0;  // Reset Timer1 control register B
@@ -52,26 +52,33 @@ void setup() {
   // Period = 20ms = 0.02s
   // ICR1 = (0.02s * 2,000,000Hz) / 2 = 20,000 (phase-correct divides by 2)
   ICR1 = 20000;  // Set top value for 50Hz
+  
+  // Set OC1A (Arduino pin 9) as output
+  DDRB |= (1 << PB1);  // PB1 = Arduino digital pin 9
+  
+  delay(500);
 }
 
 void loop() {
   int chosenAngle = getValidAngle();
   // duration of pulse, in milliseconds
-  float high = 0;
-  switch (chosenAngle) {
-    case -90:
-      high = 1;
-    case 0:
-      high = 1.5;
-    case 90:
-      high = 2;
+  float high = 1.5;
+  // value of OCR1A register, duration of pulse multiplied by 1000
+  float val = 3000;
+  // the following values of variable high are based on testing
+  if (chosenAngle == -90) {
+    high = 0.5;
+  } else if (chosenAngle == 0) {
+    high = 1.5;
+  } else {
+    high = 2.5;
   }
-  // Calculate pulse width for high duration
-  // Pulse width = (high * 2,000,000Hz) / 1000 = 3000
-  OCR1A = (high * 2000000) / 1000;  // Set compare value for 1.5ms pulse
-  Serial.print("OCR1A: ");
-  Serial.println(OCR1A);
+  val = 1000 * high;
 
+  // Calculate pulse width for high duration
+  // Pulse width = (high * 2,000,000Hz) / 1000
+  OCR1A = val;  // Set compare value for 1.5ms pulse
+  
   // Calculate and print duty cycle information
   float pulse_width_ms = high;  // Convert timer ticks to ms
   float period_ms = 20.0;  // Fixed 20ms period for 50Hz
