@@ -1,4 +1,43 @@
+int getValidAngle() {
+  int angle;
+  bool validInput = false;
+  while (!validInput) {
+    Serial.println();
+    Serial.println("Please enter an angle (-90, 0, or 90):");
+    while (!Serial.available() > 0) {
+      delay(10);
+    }
+    String input = Serial.readString();
+    input.trim();
+    if (input == "0") {
+      angle = 0;
+    } else if (input.toInt() == 0) {
+      angle = -1;
+    } else {
+      angle = input.toInt();
+    }
+    Serial.print("Raw input: ");
+    Serial.println(angle);
+    // validate
+    if (angle == -90 || angle == 0 || angle == 90) {
+      validInput = true;
+      Serial.print("Valid input received: ");
+      Serial.println(angle);
+    } else {
+      Serial.print("Invalid input: '");
+      Serial.print(angle);
+      Serial.println("'. Please enter -90, 0, or 90.");
+    }
+  }
+  while (Serial.available()) {
+    Serial.read();
+  }
+  return angle;
+}
+
 void setup() {
+  Serial.begin(9600);
+
   // Set up Timer1 for phase-correct PWM at 50Hz
   TCCR1A = 0;  // Reset Timer1 control register A
   TCCR1B = 0;  // Reset Timer1 control register B
@@ -13,27 +52,37 @@ void setup() {
   // Period = 20ms = 0.02s
   // ICR1 = (0.02s * 2,000,000Hz) / 2 = 20,000 (phase-correct divides by 2)
   ICR1 = 20000;  // Set top value for 50Hz
-  
-  // Calculate pulse width for 1.5ms high
-  // Pulse width = (1.5ms * 2,000,000Hz) / 1000 = 3000
-  OCR1A = 3000;  // Set compare value for 1.5ms pulse
-  
-  // Set OC1A (Arduino pin 9) as output
-  DDRB |= (1 << PB1);  // PB1 = Arduino digital pin 9
 }
 
 void loop() {
-  // Calculate and print duty cycle information
-  // float pulse_width_ms = 1.5;  // Convert timer ticks to ms
-  // float period_ms = 20.0;  // Fixed 20ms period for 50Hz
-  // float duty_cycle_percent = (pulse_width_ms / period_ms) * 100.0;
-  
-  // Serial.print("Pulse Width: ");
-  // Serial.print(pulse_width_ms, 2);
-  // Serial.print("ms (");
-  // Serial.print(duty_cycle_percent, 1);
-  // Serial.print("%) | OCR1A: ");
-  // Serial.println(OCR1A);
+  int chosenAngle = getValidAngle();
+  // duration of pulse, in milliseconds
+  float high = 0;
+  switch (chosenAngle) {
+    case -90:
+      high = 1;
+    case 0:
+      high = 1.5;
+    case 90:
+      high = 2;
+  }
+  // Calculate pulse width for high duration
+  // Pulse width = (high * 2,000,000Hz) / 1000 = 3000
+  OCR1A = (high * 2000000) / 1000;  // Set compare value for 1.5ms pulse
+  Serial.print("OCR1A: ");
+  Serial.println(OCR1A);
 
-  delay(500);
+  // Calculate and print duty cycle information
+  float pulse_width_ms = high;  // Convert timer ticks to ms
+  float period_ms = 20.0;  // Fixed 20ms period for 50Hz
+  float duty_cycle_percent = (pulse_width_ms / period_ms) * 100.0;
+  
+  Serial.print("Pulse Width: ");
+  Serial.print(pulse_width_ms, 2);
+  Serial.print("ms (");
+  Serial.print(duty_cycle_percent, 1);
+  Serial.print("%) | OCR1A: ");
+  Serial.println(OCR1A);
+
+  delay(1000);
 }
