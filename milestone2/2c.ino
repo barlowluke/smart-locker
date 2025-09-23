@@ -11,9 +11,11 @@ int inputIndex = 0;
 SystemState currentState = STATE_LOCKED;
 unsigned long lockTimer = 0;
 const unsigned long LOCK_DELAY = 2000; // 2 seconds delay before locking
+bool errorDisplayed = false;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println();
   Serial.println("=== PASSWORD SYSTEM ===");
   printSystemState();
   Serial.println("Enter 4-digit password followed by # to submit:");
@@ -43,6 +45,11 @@ void handleLockedState() {
   if (Serial.available() > 0) {
     char key = Serial.read();
     
+    // reset error flag when a new input starts
+    if (key >= '0' && key <= '9' || key == '#' || key == '\b') {
+      errorDisplayed = false;
+    }
+
     // Process numeric digits
     if (key >= '0' && key <= '9') {
       // Check if buffer has space for more digits
@@ -52,8 +59,14 @@ void handleLockedState() {
         Serial.print("*"); // Show input feedback
       } else {
         // Buffer full - ignore additional digits
-        Serial.println("\nError: Password too long! Maximum 4 digits.");
-        Serial.println("Please enter # to submit or backspace to correct:");
+        if (!errorDisplayed) {
+          Serial.print("errorDisplayed: ");
+          Serial.println(errorDisplayed);
+          Serial.println("\nError: Password too long! Maximum 4 digits.");
+          Serial.println("Please enter # to submit or backspace to correct:");
+          errorDisplayed = true;
+        }
+        inputIndex = 5;
       }
     }
     // Handle submit (# symbol)
@@ -74,28 +87,44 @@ void handleLockedState() {
     }
     // Ignore other non-numeric characters
     else if (key != '\n' && key != '\r') {
-      Serial.println("\nInvalid character! Only digits 0-9 and # are accepted.");
-      Serial.print("Current input: ");
-      for (int i = 0; i < inputIndex; i++) Serial.print("*");
-      Serial.println();
+      if (!errorDisplayed) {
+        Serial.println("\nInvalid character! Only digits 0-9 and # are accepted.");
+        Serial.print("Current input: ");
+        for (int i = 0; i < inputIndex; i++) Serial.print("*");
+        Serial.println();
+        errorDisplayed = true;
+      }
     }
   }
 }
 
 void processPasswordSubmission() {
   Serial.println(); // New line after submission
-  
+  errorDisplayed = false;
+
   if (inputIndex == 0) {
     Serial.println("No password entered!");
     Serial.println("Enter 4-digit password followed by #:");
+    errorDisplayed = true;
     return;
   }
-  
-  if (inputIndex != 4) {
-    Serial.print("Invalid password length! Expected 4 digits, got ");
+
+  if (inputIndex > 4) {
+    Serial.print("inputIndex: ");
+    Serial.println(inputIndex);
+    Serial.println("Error: Password too long! Maximum 4 digits allowed.");
+    Serial.println("Please start over.");
+    errorDisplayed = true;
+    resetInput();
+    return;
+  }
+
+  if (inputIndex < 4) {
+    Serial.print("Error: Password too short! Expected 4 digits, got ");
     Serial.print(inputIndex);
     Serial.println(" digits.");
     Serial.println("Please enter exactly 4 digits followed by #:");
+    errorDisplayed = true;
     resetInput();
     return;
   }
