@@ -16,13 +16,9 @@ int getValidAngle() {
     } else {
       angle = input.toInt();
     }
-    Serial.print("Raw input: ");
-    Serial.println(angle);
     // validate
     if (angle == -90 || angle == 0 || angle == 90) {
       validInput = true;
-      Serial.print("Valid input received: ");
-      Serial.println(angle);
     } else {
       Serial.print("Invalid input: '");
       Serial.print(angle);
